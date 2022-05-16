@@ -352,9 +352,9 @@ def train():
 
 	time_step = 0
 	rewardList = []
+	buffer_list = []
 	for i_episode in range(2000):
 		# state = env.reset()
-		buffer_list = []
 		ep_reward = 0
 		# ep_reward = ppo_agent.collect(env)
 		for i in range(process_num):

@@ -45,14 +45,14 @@ action_std_decay_freq = int(2.5e5)
 update_timestep = 2500
 K_epochs = 80
 action_std_init=0.6
-device = torch.device('cpu')
+# device = torch.device('cpu')
 
-# if (torch.cuda.is_available()):
-#     device = torch.device('cuda:0')
-#     torch.cuda.empty_cache()
-#     print("Device set to : " + str(torch.cuda.get_device_name(device)))
-# else:
-#     print("Device set to : cpu")
+if (torch.cuda.is_available()):
+    device = torch.device('cuda:0')
+    torch.cuda.empty_cache()
+    print("Device set to : " + str(torch.cuda.get_device_name(device)))
+else:
+    print("Device set to : cpu")
 
 
 class RolloutBuffer:
@@ -111,9 +111,8 @@ class MLPQFunction(nn.Module):
 
 
 class ActorCritic(nn.Module):
-	def __init__(self, state_dim, action_dim, has_continuous_action_space, action_std_init,device='cpu'):
+	def __init__(self, state_dim, action_dim, has_continuous_action_space, action_std_init):
 		super(ActorCritic, self).__init__()
-		self.device = device 
 		self.has_continuous_action_space = has_continuous_action_space
 		self.action_dim = action_dim
 		self.action_var = torch.full((action_dim,), action_std_init * action_std_init).to(device)
@@ -125,7 +124,7 @@ class ActorCritic(nn.Module):
 		])
 
 	def set_action_std(self, new_action_std):
-		self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(self.device)
+		self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(device)
 
 	def act(self, state):
 		action_mean = self.actor(state)
@@ -139,7 +138,7 @@ class ActorCritic(nn.Module):
 	def evaluate(self, state, action):
 		action_mean = self.actor(state)
 		action_var = self.action_var.expand_as(action_mean)
-		cov_mat = torch.diag_embed(action_var).to(self.device)
+		cov_mat = torch.diag_embed(action_var).to(device)
 		dist = MultivariateNormal(action_mean, cov_mat)
 		if self.action_dim==1:
 			action=action.reshape(-1,self.action_dim)
@@ -151,20 +150,19 @@ class ActorCritic(nn.Module):
 
 class PPO:
 	def __init__(self, policy, state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip,
-				 has_continuous_action_space, action_std_init=0.6, device='cpu'):
+				 has_continuous_action_space, action_std_init=0.6,device):
 
 		self.has_continuous_action_space = has_continuous_action_space
 		self.action_std = action_std_init
 		self.gamma = gamma
 		self.eps_clip = eps_clip
 		self.K_epochs = K_epochs
-		self.device = device
 		self.buffer = RolloutBuffer()
 		self.policy = policy
 		# self.policy = ActorCritic(state_dim, action_dim, has_continuous_action_space, action_std_init).to(device)
 		self.optimizer = policy.optimizer
 
-		self.policy_old = ActorCritic(state_dim, action_dim, has_continuous_action_space, action_std_init).to(device)
+		self.policy_old = ActorCritic(state_dim, action_dim, has_continuous_action_space, action_std_init).to(policy.device)
 		self.policy_old.load_state_dict(self.policy.state_dict())
 		self.MseLoss = nn.MSELoss()
 
@@ -352,9 +350,9 @@ def train():
 
 	time_step = 0
 	rewardList = []
+	buffer_list = []
 	for i_episode in range(2000):
 		# state = env.reset()
-		buffer_list = []
 		ep_reward = 0
 		# ep_reward = ppo_agent.collect(env)
 		for i in range(process_num):
@@ -409,8 +407,7 @@ def child_process2(pipe):
 		# log = transition.logprobs
 		# data = (r, m, s, a, log)
 		"""pipe不能直接传输buffer回主进程，可能是buffer内有transition，因此将数据取出来打包回传"""
-		pipe.send((buffer, rewards,time_step))
-		ppo_agent.buffer.clear()
+		pipe.send((transition, rewards,time_step))
 
 
 

@@ -352,9 +352,9 @@ def train():
 
 	time_step = 0
 	rewardList = []
+	buffer_list = []
 	for i_episode in range(2000):
 		# state = env.reset()
-		buffer_list = []
 		ep_reward = 0
 		# ep_reward = ppo_agent.collect(env)
 		for i in range(process_num):
@@ -402,6 +402,7 @@ def child_process2(pipe):
 		buffer.states = transition.states
 		buffer.logprobs = transition.logprobs
 		buffer.vals = transition.vals
+		ppo_agent.buffer.clear()
 		# r = transition.rewards
 		# m = transition.dones
 		# a = transition.actions
@@ -409,8 +410,7 @@ def child_process2(pipe):
 		# log = transition.logprobs
 		# data = (r, m, s, a, log)
 		"""pipe不能直接传输buffer回主进程，可能是buffer内有transition，因此将数据取出来打包回传"""
-		pipe.send((buffer, rewards,time_step))
-		ppo_agent.buffer.clear()
+		pipe.send((transition, rewards,time_step))
 
 
 

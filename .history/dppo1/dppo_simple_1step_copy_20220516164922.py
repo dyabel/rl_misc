@@ -45,14 +45,14 @@ action_std_decay_freq = int(2.5e5)
 update_timestep = 2500
 K_epochs = 80
 action_std_init=0.6
-device = torch.device('cpu')
+# device = torch.device('cpu')
 
-# if (torch.cuda.is_available()):
-#     device = torch.device('cuda:0')
-#     torch.cuda.empty_cache()
-#     print("Device set to : " + str(torch.cuda.get_device_name(device)))
-# else:
-#     print("Device set to : cpu")
+if (torch.cuda.is_available()):
+    device = torch.device('cuda:0')
+    torch.cuda.empty_cache()
+    print("Device set to : " + str(torch.cuda.get_device_name(device)))
+else:
+    print("Device set to : cpu")
 
 
 class RolloutBuffer:
@@ -158,7 +158,6 @@ class PPO:
 		self.gamma = gamma
 		self.eps_clip = eps_clip
 		self.K_epochs = K_epochs
-		self.device = device
 		self.buffer = RolloutBuffer()
 		self.policy = policy
 		# self.policy = ActorCritic(state_dim, action_dim, has_continuous_action_space, action_std_init).to(device)
@@ -352,9 +351,9 @@ def train():
 
 	time_step = 0
 	rewardList = []
+	buffer_list = []
 	for i_episode in range(2000):
 		# state = env.reset()
-		buffer_list = []
 		ep_reward = 0
 		# ep_reward = ppo_agent.collect(env)
 		for i in range(process_num):
@@ -409,8 +408,7 @@ def child_process2(pipe):
 		# log = transition.logprobs
 		# data = (r, m, s, a, log)
 		"""pipe不能直接传输buffer回主进程，可能是buffer内有transition，因此将数据取出来打包回传"""
-		pipe.send((buffer, rewards,time_step))
-		ppo_agent.buffer.clear()
+		pipe.send((transition, rewards,time_step))
 
 
 
