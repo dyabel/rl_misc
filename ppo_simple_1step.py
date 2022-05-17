@@ -196,6 +196,7 @@ class PPO:
         advs=torch.squeeze(torch.stack(self.buffer.advs, dim=0)).detach().to(device)
         advs=(advs-advs.mean())/(advs.std()+1e-7)
         rets=torch.squeeze(torch.stack(self.buffer.rets, dim=0)).detach().to(device)
+        # print(rets.shape)
         # convert list to tensor
         states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(device)
         actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
